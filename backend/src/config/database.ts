@@ -7,12 +7,17 @@ if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL environment variable is required');
 }
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  // Serverless environments (Vercel) spin up many function instances each with
+  // their own pool. Keep max connections low to avoid exhausting Neon's limit.
+  max: isProduction ? 2 : 20,
+  idleTimeoutMillis: isProduction ? 10000 : 30000,
+  connectionTimeoutMillis: 5000,
+  // Neon (and most hosted Postgres) requires SSL in production.
+  ssl: isProduction ? { rejectUnauthorized: false } : false,
 });
 
 pool.on('error', (err) => {

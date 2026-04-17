@@ -12,14 +12,7 @@ import {
 import { downloadDataUrl } from '../../utils/signatureProcessing';
 import type { PageViewport } from 'pdfjs-dist';
 
-// Signature overlay position in canvas-space pixels
-interface Overlay {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
+interface Overlay { x: number; y: number; w: number; h: number; }
 type DocType = 'pdf' | 'image' | null;
 
 export const DocumentSigner: React.FC = () => {
@@ -29,25 +22,37 @@ export const DocumentSigner: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [docType, setDocType] = useState<DocType>(null);
-  const [docBytes, setDocBytes] = useState<ArrayBuffer | null>(null);
-  const [docDataUrl, setDocDataUrl] = useState<string | null>(null);  // for images
+  // Keep two copies of PDF bytes: renderBytes is passed to pdfjs (gets transferred/consumed),
+  // embedBytes is a fresh copy kept for pdf-lib at download time.
+  const renderBytesRef = useRef<ArrayBuffer | null>(null);
+  const embedBytesRef = useRef<ArrayBuffer | null>(null);
+  const [docDataUrl, setDocDataUrl] = useState<string | null>(null);
   const [viewport, setViewport] = useState<PageViewport | null>(null);
   const [overlay, setOverlay] = useState<Overlay>({ x: 40, y: 40, w: 180, h: 60 });
-  const [dragging, setDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ dx: 0, dy: 0 });
-  const [resizing, setResizing] = useState(false);
-  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, w: 0, h: 0 });
+
+  // Use refs for drag state so mouse handlers always read current values (no stale closures)
+  const dragging = useRef(false);
+  const dragOffset = useRef({ dx: 0, dy: 0 });
+  const resizing = useRef(false);
+  const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0 });
+  // Keep overlay in a ref too so mousemove can read it without stale closure
+  const overlayRef = useRef(overlay);
+  useEffect(() => { overlayRef.current = overlay; }, [overlay]);
 
   // ── Document drop ──────────────────────────────────────────────────────────
   const onDrop = useCallback(async (files: File[]) => {
     if (!files.length) return;
     const file = files[0];
     const bytes = await file.arrayBuffer();
-    setDocBytes(bytes);
 
     if (file.type === 'application/pdf') {
+      // Store two independent copies — pdfjs will consume the first one
+      renderBytesRef.current = bytes.slice(0);
+      embedBytesRef.current = bytes.slice(0);
       setDocType('pdf');
     } else {
+      renderBytesRef.current = bytes;
+      embedBytesRef.current = null;
       setDocType('image');
       const reader = new FileReader();
       reader.onload = (e) => setDocDataUrl(e.target?.result as string);
@@ -57,150 +62,131 @@ export const DocumentSigner: React.FC = () => {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: {
-      'application/pdf': ['.pdf'],
-      'image/*': ['.png', '.jpg', '.jpeg'],
-    },
+    accept: { 'application/pdf': ['.pdf'], 'image/*': ['.png', '.jpg', '.jpeg'] },
     multiple: false,
   });
 
-  // ── Render document + overlay on canvas (single effect) ──────────────────
+  // ── Draw document + overlay ───────────────────────────────────────────────
+  const drawOverlay = useCallback((ctx: CanvasRenderingContext2D, ov: Overlay) => {
+    if (!processedDataUrl) return;
+    const img = new Image();
+    img.onload = () => {
+      ctx.drawImage(img, ov.x, ov.y, ov.w, ov.h);
+      ctx.strokeStyle = '#8B0000';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.strokeRect(ov.x, ov.y, ov.w, ov.h);
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#8B0000';
+      ctx.fillRect(ov.x + ov.w - 10, ov.y + ov.h - 10, 10, 10);
+    };
+    img.src = processedDataUrl;
+  }, [processedDataUrl]);
+
   useEffect(() => {
     if (!canvasRef.current || !docType) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d')!;
 
-    const drawDocAndOverlay = (docImage: HTMLCanvasElement | HTMLImageElement, vp?: PageViewport) => {
-      if (docImage instanceof HTMLCanvasElement) {
-        canvas.width = docImage.width;
-        canvas.height = docImage.height;
-      } else {
-        canvas.width = (docImage as HTMLImageElement).naturalWidth;
-        canvas.height = (docImage as HTMLImageElement).naturalHeight;
-      }
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(docImage, 0, 0);
+    const afterDoc = (w: number, h: number, drawDoc: () => void, vp?: PageViewport) => {
+      canvas.width = w;
+      canvas.height = h;
+      ctx.clearRect(0, 0, w, h);
+      drawDoc();
       if (vp) setViewport(vp);
-      if (processedDataUrl) drawSignatureOverlay(ctx, overlay);
+      drawOverlay(ctx, overlay);
     };
 
-    if (docType === 'pdf' && docBytes) {
-      renderPdfPageToCanvas(docBytes, 0, 1.5).then(({ canvas: rendered, viewport: vp }) => {
-        drawDocAndOverlay(rendered, vp);
+    if (docType === 'pdf' && renderBytesRef.current) {
+      // Use a fresh copy each render so pdfjs doesn't consume the embed copy
+      const bytes = renderBytesRef.current.slice(0);
+      renderPdfPageToCanvas(bytes, 0, 1.5).then(({ canvas: rendered, viewport: vp }) => {
+        afterDoc(rendered.width, rendered.height, () => ctx.drawImage(rendered, 0, 0), vp);
       });
     } else if (docType === 'image' && docDataUrl) {
       const img = new Image();
-      img.onload = () => drawDocAndOverlay(img);
+      img.onload = () => afterDoc(img.naturalWidth, img.naturalHeight, () => ctx.drawImage(img, 0, 0));
       img.src = docDataUrl;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [docType, docBytes, docDataUrl, overlay, processedDataUrl]);
+  }, [docType, docDataUrl, overlay, processedDataUrl, drawOverlay]);
 
-  function drawSignatureOverlay(ctx: CanvasRenderingContext2D, ov: Overlay) {
-    if (!processedDataUrl) return;
-    const img = new Image();
-    img.onload = () => {
-      ctx.drawImage(img, ov.x, ov.y, ov.w, ov.h);
-      // Selection border
-      ctx.strokeStyle = '#6366f1';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([4, 3]);
-      ctx.strokeRect(ov.x, ov.y, ov.w, ov.h);
-      ctx.setLineDash([]);
-      // Resize handle
-      ctx.fillStyle = '#6366f1';
-      ctx.fillRect(ov.x + ov.w - 8, ov.y + ov.h - 8, 8, 8);
-    };
-    img.src = processedDataUrl;
-  }
-
-  // ── Mouse drag on canvas ──────────────────────────────────────────────────
+  // ── Mouse handlers (use refs — no stale closures) ─────────────────────────
   const getCanvasPos = (e: React.MouseEvent) => {
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const scaleX = canvasRef.current!.width / rect.width;
-    const scaleY = canvasRef.current!.height / rect.height;
+    const c = canvasRef.current!;
+    const rect = c.getBoundingClientRect();
     return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
+      x: (e.clientX - rect.left) * (c.width / rect.width),
+      y: (e.clientY - rect.top) * (c.height / rect.height),
     };
   };
 
   const onMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
     const { x, y } = getCanvasPos(e);
-    const handle = {
-      x: overlay.x + overlay.w - 12,
-      y: overlay.y + overlay.h - 12,
-      size: 16,
-    };
-    if (
-      x >= handle.x &&
-      x <= handle.x + handle.size &&
-      y >= handle.y &&
-      y <= handle.y + handle.size
-    ) {
-      setResizing(true);
-      setResizeStart({ x, y, w: overlay.w, h: overlay.h });
-    } else if (
-      x >= overlay.x && x <= overlay.x + overlay.w &&
-      y >= overlay.y && y <= overlay.y + overlay.h
-    ) {
-      setDragging(true);
-      setDragOffset({ dx: x - overlay.x, dy: y - overlay.y });
+    const ov = overlayRef.current;
+    const handleX = ov.x + ov.w - 14;
+    const handleY = ov.y + ov.h - 14;
+    if (x >= handleX && x <= ov.x + ov.w && y >= handleY && y <= ov.y + ov.h) {
+      resizing.current = true;
+      resizeStart.current = { x, y, w: ov.w, h: ov.h };
+    } else if (x >= ov.x && x <= ov.x + ov.w && y >= ov.y && y <= ov.y + ov.h) {
+      dragging.current = true;
+      dragOffset.current = { dx: x - ov.x, dy: y - ov.y };
     }
   };
 
   const onMouseMove = (e: React.MouseEvent) => {
+    e.preventDefault();
     const { x, y } = getCanvasPos(e);
-    if (dragging) {
-      setOverlay((ov) => ({ ...ov, x: x - dragOffset.dx, y: y - dragOffset.dy }));
-    }
-    if (resizing) {
-      const dw = x - resizeStart.x;
-      const dh = y - resizeStart.y;
+    if (dragging.current) {
+      setOverlay((ov) => ({ ...ov, x: x - dragOffset.current.dx, y: y - dragOffset.current.dy }));
+    } else if (resizing.current) {
+      const { x: sx, y: sy, w: sw, h: sh } = resizeStart.current;
       setOverlay((ov) => ({
         ...ov,
-        w: Math.max(40, resizeStart.w + dw),
-        h: Math.max(20, resizeStart.h + dh),
+        w: Math.max(40, sw + (x - sx)),
+        h: Math.max(20, sh + (y - sy)),
       }));
     }
   };
 
   const onMouseUp = () => {
-    setDragging(false);
-    setResizing(false);
+    dragging.current = false;
+    resizing.current = false;
   };
 
   // ── Download ──────────────────────────────────────────────────────────────
   const handleDownload = async () => {
     if (!processedDataUrl || !docType) return;
 
-    if (docType === 'image' && canvasRef.current) {
-      // Re-draw without the selection border for a clean export
+    if (docType === 'image' && docDataUrl) {
       const exportCanvas = document.createElement('canvas');
-      const oc = canvasRef.current;
+      const oc = canvasRef.current!;
       exportCanvas.width = oc.width;
       exportCanvas.height = oc.height;
       const ectx = exportCanvas.getContext('2d')!;
-      const base = new Image();
-      base.onload = () => {
-        ectx.drawImage(base, 0, 0);
-        const sig = new Image();
-        sig.onload = () => {
-          ectx.drawImage(sig, overlay.x, overlay.y, overlay.w, overlay.h);
-          downloadDataUrl(exportCanvas.toDataURL('image/png'), 'signed-document.png');
+      await new Promise<void>((resolve) => {
+        const base = new Image();
+        base.onload = () => {
+          ectx.drawImage(base, 0, 0);
+          const sig = new Image();
+          sig.onload = () => {
+            const ov = overlayRef.current;
+            ectx.drawImage(sig, ov.x, ov.y, ov.w, ov.h);
+            downloadDataUrl(exportCanvas.toDataURL('image/png'), 'signed-document.png');
+            resolve();
+          };
+          sig.src = processedDataUrl;
         };
-        sig.src = processedDataUrl;
-      };
-      base.src = docDataUrl!;
-    } else if (docType === 'pdf' && docBytes && viewport) {
+        base.src = docDataUrl;
+      });
+    } else if (docType === 'pdf' && embedBytesRef.current && viewport) {
+      const ov = overlayRef.current;
       const { canvasToPdfCoords } = await import('../../utils/pdfUtils');
-      const pdf = canvasToPdfCoords(overlay.x, overlay.y, overlay.w, overlay.h, viewport);
-      const signed = await embedSignatureInPdf(docBytes, processedDataUrl, {
-        x: pdf.x,
-        y: pdf.y,
-        width: pdf.w,
-        height: pdf.h,
-        pageIndex: 0,
+      const pdf = canvasToPdfCoords(ov.x, ov.y, ov.w, ov.h, viewport);
+      const signed = await embedSignatureInPdf(embedBytesRef.current, processedDataUrl, {
+        x: pdf.x, y: pdf.y, width: pdf.w, height: pdf.h, pageIndex: 0,
       });
       downloadBlob(uint8ToBlob(signed), 'signed-document.pdf');
     }
@@ -264,7 +250,7 @@ export const DocumentSigner: React.FC = () => {
             </Button>
             <Button
               variant="secondary"
-              onClick={() => { setDocType(null); setDocBytes(null); setDocDataUrl(null); }}
+              onClick={() => { renderBytesRef.current = null; embedBytesRef.current = null; setDocType(null); setDocDataUrl(null); setViewport(null); }}
             >
               Replace document
             </Button>

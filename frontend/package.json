@@ -10,6 +10,7 @@
     "lint": "eslint src --ext .ts,.tsx"
   },
   "dependencies": {
+    "@imgly/background-removal": "^1.7.0",
     "axios": "^1.6.7",
     "fabric": "^6.3.0",
     "lucide-react": "^0.344.0",

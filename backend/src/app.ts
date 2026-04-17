@@ -38,6 +38,9 @@ app.use(
   })
 );
 
+// Respond to all OPTIONS preflight requests immediately (before rate limiter)
+app.options('*', (_req, res) => { res.sendStatus(204); });
+
 // ── Body parsing ─────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));

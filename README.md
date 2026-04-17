@@ -129,3 +129,57 @@ npm run dev    # → http://localhost:5173
 | GET  | `/api/users/org/members` | List org members (admin) |
 
 > Signature processing and PDF embedding runs **entirely client-side** — no documents are uploaded to the server.
+
+---
+
+## Vercel Deployment
+
+The app deploys as **two separate Vercel projects** from the same GitHub repo.
+
+### 1. Set up Neon (free Postgres)
+
+1. Create a free project at [neon.tech](https://neon.tech)
+2. Copy the **connection string** — looks like `postgres://user:pass@ep-xxx.neon.tech/neondb?sslmode=require`
+3. In your Neon SQL editor, run the schema:
+   ```sql
+   -- paste the contents of backend/src/db/schema.sql
+   ```
+
+### 2. Deploy the Backend
+
+1. In [vercel.com](https://vercel.com), click **Add New → Project**
+2. Import the `ojakazi` repo, set **Root Directory** to `backend`
+3. Vercel auto-detects the `vercel.json` — no further build config needed
+4. Add these **Environment Variables**:
+
+| Variable | Value |
+|----------|-------|
+| `DATABASE_URL` | Your Neon connection string |
+| `JWT_SECRET` | Random 64-char string (`openssl rand -hex 32`) |
+| `JWT_REFRESH_SECRET` | Another random 64-char string |
+| `JWT_EXPIRES_IN` | `15m` |
+| `JWT_REFRESH_EXPIRES_IN` | `7d` |
+| `NODE_ENV` | `production` |
+| `FRONTEND_URL` | Your frontend Vercel URL (set after step 3, then redeploy) |
+| `SMTP_HOST` | e.g. `smtp.gmail.com` |
+| `SMTP_PORT` | `587` |
+| `SMTP_USER` | Your SMTP email address |
+| `SMTP_PASS` | Your SMTP password / app password |
+| `SMTP_FROM` | `Ojakazi <noreply@yourdomain.com>` |
+
+5. Deploy — note the backend URL (e.g. `https://ojakazi-backend.vercel.app`)
+
+### 3. Deploy the Frontend
+
+1. In Vercel, click **Add New → Project** again
+2. Import the same `ojakazi` repo, set **Root Directory** to `frontend`
+3. Add this **Environment Variable**:
+
+| Variable | Value |
+|----------|-------|
+| `VITE_API_URL` | Your backend URL from step 2 (e.g. `https://ojakazi-backend.vercel.app`) |
+
+4. Deploy — you get a URL like `https://ojakazi-frontend.vercel.app`
+5. Go back to the **backend** project → Settings → Environment Variables → update `FRONTEND_URL` to this frontend URL → **Redeploy**
+
+---

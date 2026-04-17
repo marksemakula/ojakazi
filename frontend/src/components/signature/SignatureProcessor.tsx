@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { RefreshCw, Sliders } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { useSignatureStore } from '../../store/signatureStore';
 import { processSignature } from '../../utils/signatureProcessing';
 import { Button } from '../ui/Button';
@@ -12,27 +12,33 @@ export const SignatureProcessor: React.FC = () => {
     threshold,
     processing,
     setProcessed,
-    setThreshold,
     setProcessing,
   } = useSignatureStore();
 
+  const [error, setError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const runProcessing = (t: number) => {
+  const runProcessing = () => {
     if (!originalDataUrl) return;
+    setError(null);
     setProcessing(true);
-    processSignature(originalDataUrl, t, color, true)
+    processSignature(originalDataUrl, threshold, color)
       .then(setProcessed)
+      .catch((err) => {
+        console.error('Background removal failed:', err);
+        setError('Background removal failed. Check your internet connection and try again.');
+      })
       .finally(() => setProcessing(false));
   };
 
-  // Re-process whenever original, threshold, or color changes
+  // Re-process when original image changes (ML removal runs once per upload).
+  // Colour changes re-run too so the ink colour is applied to the clean mask.
   useEffect(() => {
     if (!originalDataUrl) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => runProcessing(threshold), 150);
+    debounceRef.current = setTimeout(runProcessing, 150);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [originalDataUrl, threshold, color]);
+  }, [originalDataUrl, color]);
 
   if (!originalDataUrl) return null;
 
@@ -57,9 +63,13 @@ export const SignatureProcessor: React.FC = () => {
           </p>
           <p className="text-xs text-gray-400">Checkerboard = transparent area</p>
           <div className="rounded-lg border border-gray-200 overflow-hidden bg-checkerboard">
+            {error && (
+              <p className="text-xs text-red-600 bg-red-50 px-3 py-2">{error}</p>
+            )}
             {processing ? (
-              <div className="flex items-center justify-center h-48">
+              <div className="flex items-center justify-center h-48 flex-col gap-2">
                 <RefreshCw size={20} className="animate-spin text-brand-500" />
+                <p className="text-xs text-gray-400">Removing background… (first run downloads ~5 MB model)</p>
               </div>
             ) : processedDataUrl ? (
               <img
@@ -72,31 +82,10 @@ export const SignatureProcessor: React.FC = () => {
         </div>
       </div>
 
-      {/* Threshold slider */}
-      <div className="flex flex-col gap-1">
-        <label className="flex items-center gap-1 text-sm font-medium text-gray-700">
-          <Sliders size={14} />
-          White removal threshold: {threshold}
-        </label>
-        <input
-          type="range"
-          min={150}
-          max={255}
-          value={threshold}
-          onChange={(e) => setThreshold(parseInt(e.target.value, 10))}
-          className="w-full accent-brand-600"
-          aria-label="Background removal threshold"
-        />
-        <div className="flex justify-between text-xs text-gray-400">
-          <span>Sensitive (removes more)</span>
-          <span>Conservative (keeps more)</span>
-        </div>
-      </div>
-
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => runProcessing(threshold)}
+        onClick={runProcessing}
         icon={<RefreshCw size={14} />}
         loading={processing}
       >

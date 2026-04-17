@@ -10,6 +10,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
+    exclude: ['@imgly/background-removal'],
     include: ['fabric', 'pdf-lib'],
   },
   worker: {
@@ -17,6 +18,12 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    headers: {
+      // credentialless allows cross-origin CDN fetches (ONNX model) while still
+      // enabling SharedArrayBuffer for multi-threaded WASM inference.
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'credentialless',
+    },
     proxy: {
       '/api': {
         target: process.env.VITE_API_URL ?? 'http://localhost:4000',

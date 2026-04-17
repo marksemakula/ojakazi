@@ -177,7 +177,7 @@ The app deploys as **two separate Vercel projects** from the same GitHub repo.
 
 | Variable | Value |
 |----------|-------|
-| `VITE_API_URL` | Your backend URL from step 2 (e.g. `https://ojakazi-backend.vercel.app`) |
+| `VITE_API_URL` | Your backend URL from step 2 **without** `/api` suffix (e.g. `https://ojakazi-backend.vercel.app`) |
 
 4. Deploy — you get a URL like `https://ojakazi-frontend.vercel.app`
 5. Go back to the **backend** project → Settings → Environment Variables → update `FRONTEND_URL` to this frontend URL → **Redeploy**

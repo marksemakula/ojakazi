@@ -70,7 +70,7 @@ export async function processSignature(
 ): Promise<string> {
   const inputBlob = await dataUrlToBlob(dataUrl);
   const outputBlob = await removeBackground(inputBlob, {
-    model: 'medium',
+    model: 'isnet',
     output: {
       format: 'image/png',
       quality: 1,

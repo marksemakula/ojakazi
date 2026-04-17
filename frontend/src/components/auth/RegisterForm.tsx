@@ -35,8 +35,13 @@ export const RegisterForm: React.FC = () => {
       await register(form.name, form.email, form.password);
       setSuccess(true);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      setErrors({ general: msg ?? 'Registration failed. Please try again.' });
+      const e = err as { response?: { status?: number; data?: { error?: string } }; message?: string };
+      const msg =
+        e?.response?.data?.error ??
+        (e?.response?.status ? `Server error ${e.response.status}` : null) ??
+        e?.message ??
+        'Registration failed. Please try again.';
+      setErrors({ general: msg });
     } finally {
       setLoading(false);
     }

@@ -21,10 +21,17 @@ app.use(
 app.set('trust proxy', 1);
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
-const allowedOrigin = process.env.FRONTEND_URL ?? 'http://localhost:5173';
+// FRONTEND_URL can be a single origin or a comma-separated list, e.g.:
+//   https://ojakazi.vercel.app,https://ojakazi-git-main-user.vercel.app
+const rawOrigins = process.env.FRONTEND_URL ?? 'http://localhost:5173';
+const allowedOrigins = rawOrigins.split(',').map((o) => o.trim()).filter(Boolean);
 app.use(
   cors({
-    origin: allowedOrigin,
+    origin: (origin, callback) => {
+      // Allow server-to-server requests (no Origin header) and listed origins
+      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error(`CORS: origin '${origin}' not allowed`));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

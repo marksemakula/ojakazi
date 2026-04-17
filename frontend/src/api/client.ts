@@ -1,7 +1,11 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? '/api';
+// VITE_API_URL should be the backend root (e.g. https://ojakazi-backend.vercel.app).
+// In dev it is left unset and the Vite proxy handles /api/* forwarding.
+const BASE_URL = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL.replace(/\/api$/, '')}/api`
+  : '/api';
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,

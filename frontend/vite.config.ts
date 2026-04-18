@@ -13,6 +13,11 @@ export default defineConfig({
     exclude: ['@imgly/background-removal'],
     include: ['fabric', 'pdf-lib'],
   },
+  build: {
+    rollupOptions: {
+      external: ['onnxruntime-web/webgpu'],
+    },
+  },
   worker: {
     format: 'es',
   },

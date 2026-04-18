@@ -10,7 +10,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    exclude: ['@imgly/background-removal'],
+    exclude: ['@imgly/background-removal', 'onnxruntime-web'],
     include: ['fabric', 'pdf-lib'],
   },
   build: {

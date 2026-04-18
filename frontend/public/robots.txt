@@ -4,4 +4,4 @@ Allow: /
 # Block API routes from crawling
 Disallow: /api/
 
-Sitemap: https://ojakazi.vercel.app/sitemap.xml
+Sitemap: https://ojakazi.inzozi.co/sitemap.xml

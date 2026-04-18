@@ -1,26 +1,67 @@
 import React from 'react';
 import { Navbar } from './Navbar';
+import { Linkedin, Youtube, Slack } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
+
+const XIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" aria-hidden="true">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.736-8.849L2.25 2.25h7.095l4.258 5.635L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z" />
+  </svg>
+);
+
+const DiscordIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" aria-hidden="true">
+    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
+  </svg>
+);
+
+const TikTokIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" aria-hidden="true">
+    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07z" />
+  </svg>
+);
+
+const SnapchatIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" aria-hidden="true">
+    <path d="M12.206.793c.99 0 4.347.276 5.93 3.821.529 1.193.403 3.219.299 4.847l-.003.06c-.012.18-.022.345-.03.51.083.045.207.09.36.09.25-.015.52-.08.79-.19.132-.056.26-.082.381-.082.22 0 .4.08.5.24.19.28.14.59-.15.84-.08.07-.196.145-.336.22-.363.2-.936.465-1.14.93-.05.112-.067.23-.067.35 0 .14.03.29.094.44.606 1.578 1.685 2.553 2.725 3.499.31.28.625.563.916.86.33.34.467.685.395 1.01-.14.633-.98 1.036-2.513 1.228-.067.008-.105.044-.12.075-.025.05-.027.117-.002.186.073.194.252.434.514.673.132.12.2.267.2.42 0 .157-.073.31-.22.448-.217.2-.577.332-1.01.38-.268.03-.54.03-.795.03-.25 0-.49 0-.72.04-.88.14-1.518.544-2.085.903-.626.393-1.24.782-2.135.782-.898 0-1.513-.39-2.14-.782-.567-.36-1.205-.764-2.083-.904-.23-.04-.47-.04-.718-.04-.256 0-.528 0-.797-.03-.432-.048-.79-.18-1.008-.38-.146-.137-.22-.29-.22-.45 0-.152.07-.3.2-.42.264-.24.442-.48.515-.673.025-.07.022-.136-.003-.186-.015-.03-.052-.067-.12-.075-1.534-.192-2.372-.595-2.512-1.228-.073-.325.063-.67.394-1.01.29-.3.605-.58.916-.86 1.04-.948 2.12-1.923 2.725-3.5.063-.15.094-.3.094-.44 0-.12-.017-.238-.068-.35-.203-.465-.776-.73-1.14-.93-.14-.075-.253-.15-.335-.22-.29-.25-.34-.56-.15-.84.1-.16.28-.24.5-.24.12 0 .25.025.382.082.27.11.538.175.79.19.152 0 .277-.045.36-.09-.01-.164-.02-.33-.03-.51l-.003-.06c-.104-1.628-.23-3.654.299-4.847C7.859 1.069 11.215.793 12.206.793z" />
+  </svg>
+);
+
+const socials = [
+  { label: 'X (Twitter)', href: '#', Icon: XIcon },
+  { label: 'LinkedIn', href: '#', Icon: () => <Linkedin size={18} aria-hidden="true" /> },
+  { label: 'YouTube', href: '#', Icon: () => <Youtube size={18} aria-hidden="true" /> },
+  { label: 'Slack', href: '#', Icon: () => <Slack size={18} aria-hidden="true" /> },
+  { label: 'Discord', href: '#', Icon: DiscordIcon },
+  { label: 'TikTok', href: '#', Icon: TikTokIcon },
+  { label: 'Snapchat', href: '#', Icon: SnapchatIcon },
+];
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => (
   <div className="min-h-screen flex flex-col bg-gray-50">
     <Navbar />
     <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">{children}</main>
     <footer className="bg-white border-t border-gray-200 mt-8">
-      <div className="container mx-auto max-w-6xl px-4 py-10 flex flex-col items-center gap-4">
+      <div className="container mx-auto max-w-6xl px-4 py-10 flex flex-col items-center gap-5">
         <img
           src="/inzozi-logo.png"
           alt="Inzozi Partners"
           className="h-20 w-auto opacity-80"
         />
-        <div className="text-center">
-          <p className="text-xs font-bold tracking-[0.25em] text-gray-500 uppercase">Inzozi Partners</p>
-          <p className="text-xs text-gray-400 mt-1">
-            E-Signature &amp; E-Stamp Platform
-          </p>
+        <div className="flex items-center gap-5">
+          {socials.map(({ label, href, Icon }) => (
+            <a
+              key={label}
+              href={href}
+              aria-label={label}
+              className="text-gray-400 hover:text-brand-600 transition-colors"
+            >
+              <Icon />
+            </a>
+          ))}
         </div>
         <p className="text-xs text-gray-300">
           &copy; {new Date().getFullYear()} Inzozi Partners. All rights reserved.

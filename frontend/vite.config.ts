@@ -10,13 +10,8 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    exclude: ['@imgly/background-removal', 'onnxruntime-web'],
+    exclude: ['@imgly/background-removal'],
     include: ['fabric', 'pdf-lib'],
-  },
-  build: {
-    rollupOptions: {
-      external: (id) => id.startsWith('onnxruntime-web'),
-    },
   },
   worker: {
     format: 'es',

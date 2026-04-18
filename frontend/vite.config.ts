@@ -7,6 +7,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
+      // Explicit aliases so Vite's import-analysis can resolve these subpath
+      // exports when @imgly/background-removal (excluded from dep opt) uses them.
+      'onnxruntime-web/webgpu': resolve(__dirname, './node_modules/onnxruntime-web/dist/ort.webgpu.bundle.min.mjs'),
+      'onnxruntime-web': resolve(__dirname, './node_modules/onnxruntime-web/dist/ort.bundle.min.mjs'),
     },
   },
   optimizeDeps: {

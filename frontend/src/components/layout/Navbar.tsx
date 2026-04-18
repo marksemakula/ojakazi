@@ -58,7 +58,7 @@ export const Navbar: React.FC = () => {
           <span className="text-sm text-gray-600 hidden sm:inline">{user.name}</span>
         )}
 
-        {isAuthenticated ? (
+        {isAuthenticated && (
           <button
             onClick={handleLogout}
             className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-sm text-gray-500 hover:bg-gray-100"
@@ -66,13 +66,6 @@ export const Navbar: React.FC = () => {
           >
             <LogOut size={16} />
           </button>
-        ) : (
-          <NavLink
-            to="/login"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-brand-600 hover:bg-brand-50"
-          >
-            Sign in
-          </NavLink>
         )}
       </div>
     </header>

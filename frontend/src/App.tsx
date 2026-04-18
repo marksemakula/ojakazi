@@ -3,7 +3,6 @@ import { Layout } from './components/layout/Layout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
-import { RegisterPage } from './pages/RegisterPage';
 import { SignaturePage } from './pages/SignaturePage';
 import { StampPage } from './pages/StampPage';
 import { OrganizationPage } from './pages/OrganizationPage';
@@ -14,7 +13,7 @@ export default function App() {
       <Routes>
         {/* Public auth routes (no layout chrome) */}
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/register" element={<Navigate to="/" replace />} />
 
         {/* Public home with layout */}
         <Route

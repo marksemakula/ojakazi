@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { PenLine, Stamp, Shield, ArrowRight } from 'lucide-react';
-import { useAuthStore } from '../store/authStore';
+import { PenLine, Stamp, ArrowRight } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 
 const features = [
@@ -17,17 +16,9 @@ const features = [
     description:
       'Build custom stamps with text, logos, shapes, and borders using a drag-and-drop canvas. Export as high-resolution transparent PNG.',
   },
-  {
-    icon: Shield,
-    title: 'Domain-Verified',
-    description:
-      'All features are gated behind DNS or email domain verification, ensuring only legitimate organizations can sign documents.',
-  },
 ];
 
 export const HomePage: React.FC = () => {
-  const { isAuthenticated } = useAuthStore();
-
   return (
     <div className="flex flex-col gap-16 py-8">
       {/* Hero */}
@@ -45,23 +36,17 @@ export const HomePage: React.FC = () => {
           <Link to="/signature">
             <Button icon={<PenLine size={16} />}>Sign a document</Button>
           </Link>
-          {isAuthenticated ? (
-            <Link to="/stamp">
-              <Button variant="secondary" icon={<Stamp size={16} />}>
-                Design a stamp
-              </Button>
-            </Link>
-          ) : (
-            <Link to="/register">
-              <Button variant="secondary">Create account</Button>
-            </Link>
-          )}
+          <Link to="/stamp">
+            <Button variant="secondary" icon={<Stamp size={16} />}>
+              Design a stamp
+            </Button>
+          </Link>
         </div>
       </section>
 
       {/* Features */}
       <section>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
           {features.map(({ icon: Icon, title, description }) => (
             <div
               key={title}
@@ -72,14 +57,12 @@ export const HomePage: React.FC = () => {
               </div>
               <h2 className="font-semibold text-gray-900">{title}</h2>
               <p className="text-sm text-gray-600 leading-relaxed">{description}</p>
-              {(title === 'E-Signature' || isAuthenticated) && (
-                <Link
-                  to={title === 'E-Signature' ? '/signature' : title === 'E-Stamp Designer' ? '/stamp' : '/organization'}
-                  className="flex items-center gap-1 text-sm text-brand-600 font-medium hover:underline mt-auto"
-                >
-                  Open <ArrowRight size={14} />
-                </Link>
-              )}
+              <Link
+                to={title === 'E-Signature' ? '/signature' : '/stamp'}
+                className="flex items-center gap-1 text-sm text-brand-600 font-medium hover:underline mt-auto"
+              >
+                Open <ArrowRight size={14} />
+              </Link>
             </div>
           ))}
         </div>

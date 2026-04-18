@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { login } from '../../api/auth';
@@ -55,12 +55,6 @@ export const LoginForm: React.FC = () => {
       <Button type="submit" loading={loading} className="mt-2">
         Sign in
       </Button>
-      <p className="text-center text-sm text-gray-500">
-        No account?{' '}
-        <Link to="/register" className="text-brand-600 hover:underline">
-          Register
-        </Link>
-      </p>
     </form>
   );
 };

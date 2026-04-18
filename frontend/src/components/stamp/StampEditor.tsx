@@ -492,7 +492,8 @@ export const StampEditor: React.FC<StampEditorProps> = ({
           onAddEllipse={addEllipse}
           onAddLine={addLine}
           onAddImage={addImage}
-          onAddCurvedText={() => { setIsEditingArc(false); setCtText(''); setCurvedTextOpen(true); }}
+          onAddCurvedText={() => { setIsEditingArc(false); setCtText(''); setCtArc('top'); setCurvedTextOpen(true); }}
+          onAddCurvedTextReverse={() => { setIsEditingArc(false); setCtText(''); setCtArc('bottom-reverse'); setCurvedTextOpen(true); }}
           onUndo={() => fabricRef.current && undo(fabricRef.current)}
           onRedo={() => fabricRef.current && redo(fabricRef.current)}
           onDelete={() => fabricRef.current && deleteSelected(fabricRef.current)}

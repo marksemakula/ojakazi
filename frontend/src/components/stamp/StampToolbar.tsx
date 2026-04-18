@@ -22,6 +22,7 @@ interface ToolbarProps {
   onAddLine: () => void;
   onAddImage: (file: File) => void;
   onAddCurvedText: () => void;
+  onAddCurvedTextReverse: () => void;
   onUndo: () => void;
   onRedo: () => void;
   onDelete: () => void;
@@ -58,6 +59,7 @@ export const StampToolbar: React.FC<ToolbarProps> = ({
   onAddLine,
   onAddImage,
   onAddCurvedText,
+  onAddCurvedTextReverse,
   onUndo,
   onRedo,
   onDelete,
@@ -70,6 +72,7 @@ export const StampToolbar: React.FC<ToolbarProps> = ({
     <div className="flex flex-col gap-1 w-16 bg-white border border-gray-200 rounded-xl p-1.5 shadow-sm shrink-0">
       <ToolBtn onClick={onAddText} title="Text" icon={<Type size={18} />} />
       <ToolBtn onClick={onAddCurvedText} title="Arc Text" icon={<Spline size={18} />} />
+      <ToolBtn onClick={onAddCurvedTextReverse} title="Rev Arc" icon={<span style={{ transform: 'scaleY(-1)', display: 'inline-block' }}><Spline size={18} /></span>} />
       <ToolBtn onClick={onAddRect} title="Rect" icon={<Square size={18} />} />
       <ToolBtn onClick={onAddCircle} title="Circle" icon={<Circle size={18} />} />
       <ToolBtn onClick={onAddEllipse} title="Ellipse" icon={<MoreVertical size={18} />} />

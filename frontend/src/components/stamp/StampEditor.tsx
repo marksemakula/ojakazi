@@ -82,10 +82,11 @@ export const StampEditor: React.FC<StampEditorProps> = ({
     canvas.on('object:removed', () => { pushHistory(canvas); setDirty(true); refreshLayers(canvas); });
 
     // Double-click arc text to re-edit
-    canvas.on('mouse:dblclick', ({ target }: { target?: { data?: Record<string, unknown> } }) => {
+    canvas.on('mouse:dblclick', (e) => {
+      const target = e.target as unknown as { data?: Record<string, unknown> } | undefined;
       if (target?.data?.type === 'arcText') {
         const d = target.data as { type: string; text: string; radius: number; fontSize: number; color: string; arc: 'top' | 'bottom' | 'bottom-reverse' | 'full' };
-        editingArcGroupRef.current = target as unknown as Group;
+        editingArcGroupRef.current = e.target as unknown as Group;
         setCtText(d.text);
         setCtRadius(d.radius);
         setCtFontSize(d.fontSize);
@@ -340,7 +341,7 @@ export const StampEditor: React.FC<StampEditorProps> = ({
     });
 
     const group = new Group(textObjs);
-    group.data = { type: 'arcText', text, radius, fontSize, color, arc };
+    (group as unknown as { data: Record<string, unknown> }).data = { type: 'arcText', text, radius, fontSize, color, arc };
     return group;
   }
 

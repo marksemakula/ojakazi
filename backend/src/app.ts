@@ -6,7 +6,6 @@ import { apiLimiter } from './middleware/rateLimiter';
 import { errorHandler } from './middleware/errorHandler';
 import authRouter from './routes/auth';
 import stampRouter from './routes/stamp';
-import domainRouter from './routes/domain';
 import usersRouter from './routes/users';
 
 const app = express();
@@ -51,7 +50,6 @@ app.use('/api', apiLimiter);
 // ── Routes ───────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRouter);
 app.use('/api/stamp', stampRouter);
-app.use('/api/domain', domainRouter);
 app.use('/api/users', usersRouter);
 
 app.get('/api/health', (_req, res) => {

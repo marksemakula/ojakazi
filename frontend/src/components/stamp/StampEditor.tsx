@@ -1,11 +1,15 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Canvas as FabricCanvas, IText, Rect, Circle, Ellipse, Line, FabricImage } from 'fabric';
+import { Canvas as FabricCanvas, IText, Rect, Circle, Ellipse, Line, FabricImage, Group } from 'fabric';
 import { StampToolbar } from './StampToolbar';
 import { StampLayerPanel } from './StampLayerPanel';
 import { Button } from '../ui/Button';
+import { Modal } from '../ui/Modal';
+import { Input } from '../ui/Input';
 import { Save, Download } from 'lucide-react';
 import { createStamp, updateStamp } from '../../api/stamp';
+import { createLocalStamp, updateLocalStamp } from '../../api/localStamp';
 import { useStampStore } from '../../store/stampStore';
+import { useAuthStore } from '../../store/authStore';
 
 export interface StampEditorProps {
   stampId?: string;          // if provided, load existing stamp
@@ -29,13 +33,24 @@ export const StampEditor: React.FC<StampEditorProps> = ({
   const historyRef = useRef<string[]>([]);
   const historyIndexRef = useRef(-1);
   const skipHistoryRef = useRef(false);
+  const editingArcGroupRef = useRef<Group | null>(null);
 
   const [name, setName] = useState(initialName);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [objects, setObjects] = useState<{ id: string; type: string; label: string }[]>([]);
 
+  // ── Curved text dialog ────────────────────────────────────────────────────
+  const [curvedTextOpen, setCurvedTextOpen] = useState(false);
+  const [isEditingArc, setIsEditingArc] = useState(false);
+  const [ctText, setCtText] = useState('');
+  const [ctRadius, setCtRadius] = useState(180);
+  const [ctFontSize, setCtFontSize] = useState(24);
+  const [ctColor, setCtColor] = useState('#1a1a6e');
+  const [ctArc, setCtArc] = useState<'top' | 'bottom' | 'bottom-reverse' | 'full'>('top');
+
   const { addStamp, updateStamp: updateStampInStore, setDirty } = useStampStore();
+  const { isAuthenticated } = useAuthStore();
 
   // ── Canvas init ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -65,6 +80,21 @@ export const StampEditor: React.FC<StampEditorProps> = ({
     canvas.on('object:added', () => { if (!skipHistoryRef.current) pushHistory(canvas); setDirty(true); refreshLayers(canvas); });
     canvas.on('object:modified', () => { pushHistory(canvas); setDirty(true); });
     canvas.on('object:removed', () => { pushHistory(canvas); setDirty(true); refreshLayers(canvas); });
+
+    // Double-click arc text to re-edit
+    canvas.on('mouse:dblclick', ({ target }: { target?: { data?: Record<string, unknown> } }) => {
+      if (target?.data?.type === 'arcText') {
+        const d = target.data as { type: string; text: string; radius: number; fontSize: number; color: string; arc: 'top' | 'bottom' | 'bottom-reverse' | 'full' };
+        editingArcGroupRef.current = target as unknown as Group;
+        setCtText(d.text);
+        setCtRadius(d.radius);
+        setCtFontSize(d.fontSize);
+        setCtColor(d.color);
+        setCtArc(d.arc);
+        setIsEditingArc(true);
+        setCurvedTextOpen(true);
+      }
+    });
 
     // Keyboard shortcuts
     const onKey = (e: KeyboardEvent) => {
@@ -251,6 +281,88 @@ export const StampEditor: React.FC<StampEditorProps> = ({
     reader.readAsDataURL(file);
   }, []);
 
+  // ── Curved text ───────────────────────────────────────────────────────────
+  function buildArcTextGroup(
+    text: string,
+    radius: number,
+    fontSize: number,
+    color: string,
+    arc: 'top' | 'bottom' | 'bottom-reverse' | 'full'
+  ): Group {
+    const chars = text.split('');
+    const cx = CANVAS_SIZE / 2;
+    const cy = CANVAS_SIZE / 2;
+    const charWidth = fontSize * 0.58;
+    const totalArcLength = chars.length * charWidth;
+    const totalAngle = totalArcLength / radius;
+
+    let startAngle: number;
+    let angleStep: number;
+
+    if (arc === 'full') {
+      startAngle = -Math.PI / 2;
+      angleStep = (2 * Math.PI) / chars.length;
+    } else if (arc === 'top') {
+      angleStep = totalAngle / chars.length;
+      startAngle = -Math.PI / 2 - totalAngle / 2;
+    } else if (arc === 'bottom') {
+      // bottom (inward): letters face center, text reads L→R from viewer
+      angleStep = -(totalAngle / chars.length);
+      startAngle = Math.PI / 2 + totalAngle / 2;
+    } else {
+      // bottom-reverse: letters face outward (classic seal — all text fans away from center)
+      // Clockwise from bottom-left to bottom-right; rotation same formula as top
+      angleStep = totalAngle / chars.length;
+      startAngle = Math.PI / 2 - totalAngle / 2;
+    }
+
+    const textObjs = chars.map((char, i) => {
+      const angle = startAngle + (i + 0.5) * angleStep;
+      const x = cx + radius * Math.cos(angle);
+      const y = cy + radius * Math.sin(angle);
+      // bottom (inward): base faces center; all others: base faces outward
+      const rotDeg = arc === 'bottom'
+        ? (angle - Math.PI / 2) * (180 / Math.PI)
+        : (angle + Math.PI / 2) * (180 / Math.PI);
+      return new IText(char === ' ' ? '\u00a0' : char, {
+        left: x,
+        top: y,
+        fontSize,
+        fontFamily: 'Arial',
+        fill: color,
+        originX: 'center',
+        originY: 'center',
+        angle: rotDeg,
+        editable: false,
+        selectable: false,
+        evented: false,
+      });
+    });
+
+    const group = new Group(textObjs);
+    group.data = { type: 'arcText', text, radius, fontSize, color, arc };
+    return group;
+  }
+
+  const handleAddCurvedText = useCallback(() => {
+    const canvas = fabricRef.current;
+    if (!canvas || !ctText.trim()) return;
+
+    // If editing an existing arc text group, remove the old one first
+    if (editingArcGroupRef.current) {
+      canvas.remove(editingArcGroupRef.current);
+      editingArcGroupRef.current = null;
+    }
+
+    const group = buildArcTextGroup(ctText, ctRadius, ctFontSize, ctColor, ctArc);
+    canvas.add(group);
+    canvas.setActiveObject(group);
+    canvas.renderAll();
+    setIsEditingArc(false);
+    setCurvedTextOpen(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctText, ctRadius, ctFontSize, ctColor, ctArc]);
+
   // ── Layer operations ──────────────────────────────────────────────────────
   const bringForward = useCallback(() => {
     const canvas = fabricRef.current;
@@ -301,14 +413,28 @@ export const StampEditor: React.FC<StampEditorProps> = ({
       // Generate thumbnail
       const thumbnail = canvas.toDataURL({ format: 'png', multiplier: 0.3 });
 
-      if (stampId) {
-        const updated = await updateStamp(stampId, name, canvasJson, thumbnail);
-        updateStampInStore(updated);
-        onSaved?.(updated.id);
+      if (isAuthenticated) {
+        if (stampId) {
+          const updated = await updateStamp(stampId, name, canvasJson, thumbnail);
+          updateStampInStore(updated);
+          onSaved?.(updated.id);
+        } else {
+          const created = await createStamp(name, canvasJson, thumbnail);
+          addStamp(created);
+          onSaved?.(created.id);
+        }
       } else {
-        const created = await createStamp(name, canvasJson, thumbnail);
-        addStamp(created);
-        onSaved?.(created.id);
+        if (stampId) {
+          const updated = updateLocalStamp(stampId, name, canvasJson, thumbnail);
+          if (updated) {
+            updateStampInStore(updated);
+            onSaved?.(updated.id);
+          }
+        } else {
+          const created = createLocalStamp(name, canvasJson, thumbnail);
+          addStamp(created);
+          onSaved?.(created.id);
+        }
       }
       setDirty(false);
     } catch {
@@ -366,6 +492,7 @@ export const StampEditor: React.FC<StampEditorProps> = ({
           onAddEllipse={addEllipse}
           onAddLine={addLine}
           onAddImage={addImage}
+          onAddCurvedText={() => { setIsEditingArc(false); setCtText(''); setCurvedTextOpen(true); }}
           onUndo={() => fabricRef.current && undo(fabricRef.current)}
           onRedo={() => fabricRef.current && redo(fabricRef.current)}
           onDelete={() => fabricRef.current && deleteSelected(fabricRef.current)}
@@ -391,6 +518,82 @@ export const StampEditor: React.FC<StampEditorProps> = ({
       <p className="text-xs text-gray-400">
         Keyboard: Ctrl+Z undo · Ctrl+Y redo · Delete/Backspace remove · Ctrl+D duplicate · Arrow keys nudge
       </p>
+
+      {/* Curved text dialog */}
+      <Modal open={curvedTextOpen} onClose={() => { setCurvedTextOpen(false); setIsEditingArc(false); editingArcGroupRef.current = null; }} title={isEditingArc ? 'Edit Curved Text' : 'Add Curved Text'} size="sm">
+        <div className="p-6 flex flex-col gap-4">
+          <Input
+            label="Text"
+            value={ctText}
+            onChange={(e) => setCtText(e.target.value)}
+            placeholder="Enter text..."
+            autoFocus
+            onKeyDown={(e) => { if (e.key === 'Enter') handleAddCurvedText(); }}
+          />
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-gray-700">Arc position</label>
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                ['top',            'Top arc'],
+                ['bottom',         'Bottom arc (inward)'],
+                ['bottom-reverse', 'Bottom arc (outward)'],
+                ['full',           'Full circle'],
+              ] as const).map(([arc, label]) => (
+                <button
+                  key={arc}
+                  type="button"
+                  onClick={() => setCtArc(arc)}
+                  className={`py-1.5 rounded-lg text-sm font-medium border transition-colors
+                    ${ctArc === arc
+                      ? 'bg-brand-600 text-white border-brand-600'
+                      : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">
+              Radius: <span className="font-normal text-gray-500">{ctRadius}px</span>
+            </label>
+            <input
+              type="range" min={40} max={230} value={ctRadius}
+              onChange={(e) => setCtRadius(Number(e.target.value))}
+              className="w-full accent-brand-600"
+            />
+          </div>
+
+          <div className="flex gap-4 items-end">
+            <div className="flex flex-col gap-1 flex-1">
+              <label className="text-sm font-medium text-gray-700">
+                Font size: <span className="font-normal text-gray-500">{ctFontSize}px</span>
+              </label>
+              <input
+                type="range" min={8} max={64} value={ctFontSize}
+                onChange={(e) => setCtFontSize(Number(e.target.value))}
+                className="w-full accent-brand-600"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">Color</label>
+              <input
+                type="color"
+                value={ctColor}
+                onChange={(e) => setCtColor(e.target.value)}
+                className="h-9 w-14 rounded border border-gray-300 p-0.5 cursor-pointer"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="secondary" size="sm" onClick={() => { setCurvedTextOpen(false); setIsEditingArc(false); editingArcGroupRef.current = null; }}>Cancel</Button>
+            <Button size="sm" onClick={handleAddCurvedText} disabled={!ctText.trim()}>{isEditingArc ? 'Update' : 'Add to canvas'}</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

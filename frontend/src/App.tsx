@@ -36,19 +36,17 @@ export default function App() {
           }
         />
 
-        {/* Protected: requires login + verified org */}
+        {/* Public: no account needed */}
         <Route
           path="/stamp"
           element={
-            <ProtectedRoute requireVerified>
-              <Layout>
-                <StampPage />
-              </Layout>
-            </ProtectedRoute>
+            <Layout>
+              <StampPage />
+            </Layout>
           }
         />
 
-        {/* Protected: requires login only (for domain verification) */}
+        {/* Protected: requires login only */}
         <Route
           path="/organization"
           element={

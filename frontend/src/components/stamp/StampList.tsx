@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2, Download } from 'lucide-react';
 import { listStamps, deleteStamp } from '../../api/stamp';
+import { listLocalStamps, deleteLocalStamp } from '../../api/localStamp';
 import { useStampStore } from '../../store/stampStore';
+import { useAuthStore } from '../../store/authStore';
 import { Stamp } from '../../types';
 import { Button } from '../ui/Button';
 
@@ -12,20 +14,24 @@ interface StampListProps {
 
 export const StampList: React.FC<StampListProps> = ({ onNew, onEdit }) => {
   const { stamps, setStamps, removeStamp, loading, setLoading } = useStampStore();
+  const { isAuthenticated } = useAuthStore();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
-    listStamps()
-      .then(setStamps)
-      .finally(() => setLoading(false));
-  }, [setStamps, setLoading]);
+    const load = isAuthenticated ? listStamps() : Promise.resolve(listLocalStamps());
+    load.then(setStamps).finally(() => setLoading(false));
+  }, [setStamps, setLoading, isAuthenticated]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this stamp? This cannot be undone.')) return;
     setDeletingId(id);
     try {
-      await deleteStamp(id);
+      if (isAuthenticated) {
+        await deleteStamp(id);
+      } else {
+        deleteLocalStamp(id);
+      }
       removeStamp(id);
     } finally {
       setDeletingId(null);

@@ -2,14 +2,13 @@ import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import * as StampModel from '../models/Stamp';
 import { authenticate } from '../middleware/auth';
-import { requireVerifiedOrg } from '../middleware/auth';
 import { AuthRequest } from '../types/index';
 import { writeAudit } from '../utils/audit';
 import { apiLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
-router.use(authenticate, requireVerifiedOrg, apiLimiter);
+router.use(authenticate, apiLimiter);
 
 const saveSchema = z.object({
   name: z.string().min(1).max(100),

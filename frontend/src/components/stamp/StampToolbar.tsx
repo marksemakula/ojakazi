@@ -11,6 +11,7 @@ import {
   BringToFront,
   SendToBack,
   MoreVertical,
+  Spline,
 } from 'lucide-react';
 
 interface ToolbarProps {
@@ -20,6 +21,7 @@ interface ToolbarProps {
   onAddEllipse: () => void;
   onAddLine: () => void;
   onAddImage: (file: File) => void;
+  onAddCurvedText: () => void;
   onUndo: () => void;
   onRedo: () => void;
   onDelete: () => void;
@@ -55,6 +57,7 @@ export const StampToolbar: React.FC<ToolbarProps> = ({
   onAddEllipse,
   onAddLine,
   onAddImage,
+  onAddCurvedText,
   onUndo,
   onRedo,
   onDelete,
@@ -66,6 +69,7 @@ export const StampToolbar: React.FC<ToolbarProps> = ({
   return (
     <div className="flex flex-col gap-1 w-16 bg-white border border-gray-200 rounded-xl p-1.5 shadow-sm shrink-0">
       <ToolBtn onClick={onAddText} title="Text" icon={<Type size={18} />} />
+      <ToolBtn onClick={onAddCurvedText} title="Arc Text" icon={<Spline size={18} />} />
       <ToolBtn onClick={onAddRect} title="Rect" icon={<Square size={18} />} />
       <ToolBtn onClick={onAddCircle} title="Circle" icon={<Circle size={18} />} />
       <ToolBtn onClick={onAddEllipse} title="Ellipse" icon={<MoreVertical size={18} />} />

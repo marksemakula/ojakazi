@@ -15,7 +15,7 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      external: ['onnxruntime-web/webgpu'],
+      external: (id) => id.startsWith('onnxruntime-web'),
     },
   },
   worker: {

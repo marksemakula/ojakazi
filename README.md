@@ -183,3 +183,4 @@ The app deploys as **two separate Vercel projects** from the same GitHub repo.
 5. Go back to the **backend** project → Settings → Environment Variables → update `FRONTEND_URL` to this frontend URL → **Redeploy**
 
 ---
+# Fixed

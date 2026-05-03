@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { PenLine, Stamp, Building2, LogOut } from 'lucide-react';
+import { PenLine, Stamp, Building2, LogOut, Heart } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { logout } from '../../api/auth';
 
@@ -54,6 +54,17 @@ export const Navbar: React.FC = () => {
       </nav>
 
       <div className="flex items-center gap-3 shrink-0">
+        <a
+          href="https://eversend.me/marc1705"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-sm text-gray-500 hover:bg-gray-100"
+          title="Donate"
+        >
+          <Heart size={16} />
+          <span className="hidden sm:inline">Donate</span>
+        </a>
+
         {user && (
           <span className="text-sm text-gray-600 hidden sm:inline">{user.name}</span>
         )}
